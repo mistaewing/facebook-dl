@@ -1,64 +1,47 @@
 #!/usr/bin/env python3
 
-import re
-import sys
-import random
 import argparse
+import os
+import re
+import uuid
+
 import requests
 
-good = "\033[92m✔\033[0m"
 
-# This magic spell lets me erase the current line.
-# I can use this to show for example "Downloading..."
-# and then "Downloaded" on the line where
-# "Downloading..." was.
-ERASE_LINE = '\x1b[2K'
-
-# This extracts the video url
 def extract_url(html, quality):
-    """
-    html       -    the html code of the webpage where the video is located
-    quality    -    the quality of the video that should be downloaded (SD or HD)
-    """
+    if quality == "HD":
+        try:
+            file_url = re.findall('hd_src:"(.+?")', html)[0]
+        except IndexError:
+            print("Could not find HD source. Downloading SD...")
+            file_url = re.findall('sd_src:"(.+?)"', html)[0]
+    else:
+        file_url = re.findall('sd_src:"(.+?")', html)[0]
+    return file_url
 
-    # Here we are using an if-then-else one-liner statement.
-    # It might look a little confusing at first, but it makes a lot of sense
-    # once you get an understanding of it.
-    # Read this if you are a little confused: https://stackoverflow.com/a/2802748/9215267
-    return re.findall(f"{'sd_src' if quality == 'sd' else 'hd_src'}:\"(.+?)\"", html)[0]
+
+def get_file_name(html):
+    try:
+        title = re.findall('title" content=(.+?)"', html)
+    except IndexError:
+        title = uuid.uuid4().hex
+    return title + ".mp4"
 
 
-def main():
-    """
-    This function takes no arguments.
-    Yes, this is a useless comment, but pylint requires all
-    functions to have a doc-string
-    """
-    parser = argparse.ArgumentParser(description="Download videos from facebook from your terminal")
-
-    parser.add_argument('url', action="store")
-    parser.add_argument('resolution', action="store", nargs="?")
-
-    args = parser.parse_args()
-
-    print("Fetching source code...", end="\r", flush=True)
-    request = requests.get(args.url)
-    sys.stdout.write(ERASE_LINE)
-    print(good, "Fetched source code")
-
-    file_url = extract_url(request.text, args.resolution)
-
-    # Generates a random number with will be the file name
-    path = f"{str(random.random())[3:12]}.mp4"
-    print("Downloading video...", end="\r", flush=True)
-    # Downloads the video
+def download_video(url, dir_path, quality="HD"):
+    request = requests.get(url)
+    file_url = extract_url(request.text, quality)
     request = requests.get(file_url)
-    
-    with open(path, "wb") as f:
-        f.write(request.content)
+    file_path = os.path.join(dir_path, get_file_name(request.text))
+    with open(file_path, "wb") as file_:
+        file_.write(request.content)
 
-    sys.stdout.write(ERASE_LINE)
-    print(f"{good} Video downloaded: {path}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Download videos from facebook from your terminal")
+    parser.add_argument("url", type=str, help="")
+    parser.add_argument("-p", "--path", default=os.getcwd(), help="")
+    parser.add_argument("-q", "--quality", default="HD", help="")
+    args = parser.parse_args()
+
+    download_video(args.url, args.path, args.quality)
