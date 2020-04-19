@@ -39,9 +39,20 @@ def download_video(url, dir_path, quality="HD"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download videos from facebook from your terminal")
-    parser.add_argument("url", type=str, help="")
-    parser.add_argument("-p", "--path", default=os.getcwd(), help="")
-    parser.add_argument("-q", "--quality", default="HD", help="")
+    parser.add_argument("url", type=str, help="URL of the video to be downloaded.")
+    parser.add_argument(
+        "-p",
+        "--path",
+        default=os.getcwd(),
+        help="Directory where the video will be downloaded. Default is the current directory.",
+    )
+    parser.add_argument(
+        "-q",
+        "--quality",
+        default="HD",
+        help="Quality of the download. HD or SD. If HD is not found, SD will be downloaded. "
+        "Default is HD.",
+    )
     args = parser.parse_args()
 
     download_video(args.url, args.path, args.quality)
